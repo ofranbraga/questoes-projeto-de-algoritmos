@@ -142,6 +142,74 @@ float media_turma(int n, Aluno** turmas, char turma) {
     return soma_medias / contador_alunos;
 }
 
+void salvar_alunos_em_arquivo(int n, Aluno** tab, const char* notas) {
+    FILE* f = fopen(notas, "w");
+    if (f == NULL) {
+        printf("Erro ao abrir o arquivo %s\n", notas);
+        return;
+    }
+
+    fprintf(f, "===== LISTA DE ALUNOS =====\n\n");
+
+    for (int i = 0; i < n; i++) {
+        if (tab[i] != NULL) {
+            float media = (tab[i]->p1 + tab[i]->p2 + tab[i]->p3) / 3.0;
+            fprintf(f, "Matricula: %s\n", tab[i]->matricula);
+            fprintf(f, "Nome: %s\n", tab[i]->nome);
+            fprintf(f, "Turma: %c\n", tab[i]->turma);
+            fprintf(f, "Notas: P1=%.2f | P2=%.2f | P3=%.2f\n", tab[i]->p1, tab[i]->p2, tab[i]->p3);
+            fprintf(f, "Media Final: %.2f\n", media);
+            fprintf(f, "------------------------------------------\n");
+        }
+    }
+
+    fclose(f);
+    printf("Dados salvos em '%s' com sucesso!\n", notas);
+}
+
+
+void remover_aluno_do_arquivo(const char* notas, const char* matricula) {
+    FILE* f = fopen(notas, "r");
+    if (f == NULL) {
+        printf("Erro ao abrir o arquivo %s\n", notas);
+        return;
+    }
+
+    FILE* temp = fopen("temp.txt", "w");
+    if (temp == NULL) {
+        printf("Erro ao criar arquivo temporário.\n");
+        fclose(f);
+        return;
+    }
+
+    char linha[200];
+    int pular = 0; // flag para ignorar bloco do aluno
+
+    while (fgets(linha, sizeof(linha), f)) {
+        // Se encontrar a matrícula pedida, começa a pular até o próximo separador
+        if (strstr(linha, "Matricula:") && strstr(linha, matricula)) {
+            pular = 1;
+            printf("Aluno com matrícula %s removido do arquivo.\n", matricula);
+        }
+
+        if (!pular) {
+            fputs(linha, temp);
+        }
+
+        // Detecta fim do bloco do aluno
+        if (pular && strstr(linha, "------------------------------------------")) {
+            pular = 0; // volta a escrever as próximas linhas
+        }
+    }
+
+    fclose(f);
+    fclose(temp);
+
+
+    remove(notas);
+    rename("temp.txt", notas);
+}
+
 int main() {
     #define MAX_ALUNOS 50
     Aluno* tab[MAX_ALUNOS];
@@ -156,6 +224,8 @@ int main() {
         printf("2. Remover Aluno\n");
         printf("3. Imprimir Alunos Aprovados\n");
         printf("4. Calcular Media de uma Turma\n");
+        printf("5. Salvar Alunos em Arquivo\n");
+        printf("6. Remover Aluno do Arquivo\n");
         printf("0. Sair\n");
         printf("Escolha uma opcao: ");
         scanf("%d", &opcao);
@@ -189,6 +259,16 @@ int main() {
                     printf("Media geral da Turma %c: %.2f\n", turma_busca, media_final);
                 }
                 break;
+                case 5:
+                    salvar_alunos_em_arquivo(MAX_ALUNOS, tab, "notas.txt");
+                    break;
+                case 6:
+                    printf("Digite a matrícula do aluno a remover do arquivo: ");
+                    char mat[8];
+                    scanf("%7s", mat);
+                    limpar_buffer();
+                    remover_aluno_do_arquivo("notas.txt", mat);
+                    break;
             case 0:
                 printf("Encerrando o programa...\n");
                 break;
